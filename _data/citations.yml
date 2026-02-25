@@ -1,5 +1,5 @@
 metadata:
-  last_updated: '2025-12-31'
+  last_updated: '2026-02-25'
 papers:
   z0IJ9mgAAAAJ:2osOgNQ5qMEC:
     citations: 0
@@ -13,6 +13,10 @@ papers:
     citations: 0
     title: Real-time and personalized product recommendations for large e-commerce platforms
     year: '2025'
+  z0IJ9mgAAAAJ:qjMakFHDy7sC:
+    citations: 0
+    title: Credal Graph Neural Networks for Robust Uncertainty Quantification
+    year: Unknown Year
   z0IJ9mgAAAAJ:u5HHmVD_uO8C:
     citations: 1
     title: How Much Do DNA and Protein Deep Embeddings Preserve Biological Information?
