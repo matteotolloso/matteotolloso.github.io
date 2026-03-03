@@ -254,9 +254,20 @@ h1{
 }
 
 @media (max-width: 768px){
+  html,
+  body{
+    overflow-y: auto;
+  }
+
+  body{
+    -webkit-overflow-scrolling: touch;
+  }
+
   .wrap{
     align-items:flex-start;
     padding: 12px;
+    min-height: 100%;
+    padding-bottom: 100svh;
   }
 
   .card{

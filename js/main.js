@@ -36,7 +36,7 @@ window.addEventListener('resize', resize);
 
 // Parameters: tuned to look "molecular"
 const P = {
-  N: 40, // Numero iniziale di atomi nella simulazione
+  N: 60, // Numero iniziale di atomi nella simulazione
   dt: 0.012, // Passo temporale dell'integrazione
   temp: 0.01, // Scala della velocità iniziale (temperatura)
   sigma: 14, // Distanza caratteristica del potenziale Lennard-Jones
