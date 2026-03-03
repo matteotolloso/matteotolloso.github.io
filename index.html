@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Matteo Tolloso | PhD Student — University of Pisa</title>
+  <meta name="description" content="Matteo Tolloso — PhD student at University of Pisa. Atomistic simulations, uncertainty quantification, graph neural networks." />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+  <canvas id="sim" aria-hidden="true"></canvas>
+  <div class="veil" aria-hidden="true"></div>
+
+  <div class="wrap">
+    <div class="card">
+      <div class="topbar">
+        <div class="brand">
+          <div class="dot"></div>
+          <div>
+            <strong>Matteo Tolloso</strong>
+            <span>PhD Student · University of Pisa</span>
+          </div>
+        </div>
+
+        <nav class="links">
+          <!-- Cambia questi link con i tuoi -->
+          <a class="chip" href="mailto:matteo.tolloso@unipi.it" title="Email">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M4 6h16v12H4V6Z" stroke="currentColor" stroke-width="1.6"/><path d="m4 7 8 6 8-6" stroke="currentColor" stroke-width="1.6"/></svg>
+            Email
+          </a>
+          <a class="chip" href="https://github.com/MatteoTolloso" target="_blank" rel="noopener" title="GitHub">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M12 2a10 10 0 0 0-3.16 19.49c.5.09.68-.22.68-.48v-1.7c-2.78.6-3.37-1.18-3.37-1.18-.46-1.18-1.12-1.5-1.12-1.5-.92-.64.07-.63.07-.63 1.02.07 1.56 1.06 1.56 1.06.9 1.56 2.37 1.11 2.95.85.09-.66.35-1.11.64-1.37-2.22-.26-4.56-1.13-4.56-5.02 0-1.11.39-2.02 1.03-2.73-.1-.26-.45-1.3.1-2.71 0 0 .84-.27 2.75 1.04.8-.23 1.65-.34 2.5-.34s1.7.11 2.5.34c1.9-1.31 2.75-1.04 2.75-1.04.55 1.41.2 2.45.1 2.71.64.71 1.03 1.62 1.03 2.73 0 3.9-2.34 4.76-4.57 5.02.36.31.68.93.68 1.88v2.78c0 .26.18.57.69.48A10 10 0 0 0 12 2Z" fill="currentColor"/></svg>
+            GitHub
+          </a>
+          <a class="chip" href="https://www.linkedin.com/in/MatteoTolloso" target="_blank" rel="noopener" title="LinkedIn">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M6.5 9.5V18" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M6.5 6.5h.01" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/><path d="M10 18v-4.6c0-2.4 3.5-2.6 3.5 0V18" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M13.5 13c0-2.8 4-3 4 0v5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+            LinkedIn
+          </a>
+        </nav>
+      </div>
+
+      <div class="main">
+        <section class="hero">
+          <h1>Atomistic simulations, uncertainty &amp; GNNs</h1>
+          <div class="subtitle">
+            PhD student @ University of Pisa. I build machine-learning methods for molecular / materials modelling:
+            graph neural networks, uncertainty quantification, and atomistic simulation workflows.
+          </div>
+
+          <div class="badges">
+            <div class="badge"><b>Atomistic</b> MD / potentials</div>
+            <div class="badge"><b>UQ</b> calibration &amp; reliability</div>
+            <div class="badge"><b>GNN</b> molecular graphs</div>
+            <div class="badge"><b>ML4Science</b> data-efficient models</div>
+          </div>
+
+          <div class="about">
+            <p>
+              Questo sito è volutamente semplice: una pagina pulita + uno sfondo “atomistico” che ricorda
+              una dinamica molecolare (atomi che si muovono, interazioni, legami che appaiono quando sono vicini).
+            </p>
+            <p>
+              Se vuoi, posso aggiungere una sezione “Publications”, “Projects”, un CV in PDF, oppure una
+              gallery con figure (GIF/MP4) delle tue simulazioni reali.
+            </p>
+          </div>
+        </section>
+
+        <aside class="side">
+          <div class="panel photo-panel">
+            <img class="profile-image" src="assets/profile-placeholder.svg" alt="Profile picture" />
+          </div>
+
+          <div class="panel">
+            <h3>Contact</h3>
+            <div class="kv">
+              <div class="k">Email</div>
+              <div><a href="mailto:matteo.tolloso@unipi.it">matteo.tolloso@unipi.it</a></div>
+
+              <div class="k">Affiliation</div>
+              <div>University of Pisa</div>
+
+              <div class="k">GitHub</div>
+              <div><a href="https://github.com/MatteoTolloso" target="_blank" rel="noopener">github.com/MatteoTolloso</a></div>
+
+              <div class="k">LinkedIn</div>
+              <div><a href="https://www.linkedin.com/in/MatteoTolloso" target="_blank" rel="noopener">linkedin.com/in/MatteoTolloso</a></div>
+            </div>
+          </div>
+
+          <div class="panel">
+            <h3>Background simulation</h3>
+            <div class="panel-copy">
+              Canvas “toy MD”: integrazione semplice, potenziale tipo Lennard-Jones (smussato),
+              collisioni e periodic boundaries, più legami quando la distanza è sotto soglia.
+            </div>
+          </div>
+        </aside>
+      </div>
+
+      <div class="footer">
+        <div>© <span id="year"></span> Matteo Tolloso</div>
+        <div class="hint">
+          <span class="kbd">move</span> mouse = perturbation · <span class="kbd">click</span> = add atoms · <span class="kbd">space</span> = pause
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,22 @@
+<svg width="640" height="640" viewBox="0 0 640 640" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <radialGradient id="g1" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(180 140) rotate(35) scale(520 520)">
+      <stop stop-color="#7CF3D3" stop-opacity="0.45"/>
+      <stop offset="1" stop-color="#070B14"/>
+    </radialGradient>
+    <radialGradient id="g2" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(500 190) rotate(110) scale(460 460)">
+      <stop stop-color="#9AA7FF" stop-opacity="0.45"/>
+      <stop offset="1" stop-color="#070B14" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <rect width="640" height="640" rx="36" fill="#070B14"/>
+  <rect width="640" height="640" rx="36" fill="url(#g1)"/>
+  <rect width="640" height="640" rx="36" fill="url(#g2)"/>
+
+  <circle cx="320" cy="250" r="112" fill="rgba(255,255,255,0.14)"/>
+  <circle cx="320" cy="240" r="84" fill="rgba(255,255,255,0.22)"/>
+  <path d="M170 500C188 414 251 360 320 360C389 360 452 414 470 500" fill="rgba(255,255,255,0.22)"/>
+
+  <text x="320" y="590" text-anchor="middle" fill="rgba(255,255,255,0.72)" font-family="Inter, Arial, sans-serif" font-size="26">Profile Image</text>
+</svg>
