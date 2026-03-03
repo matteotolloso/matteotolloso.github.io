@@ -27,17 +27,17 @@ window.addEventListener('resize', resize);
 
 // Parameters: tuned to look "molecular"
 const P = {
-  N: 30, // Numero iniziale di atomi nella simulazione
+  N: 40, // Numero iniziale di atomi nella simulazione
   dt: 0.012, // Passo temporale dell'integrazione
-  temp: 1.0, // Scala della velocità iniziale (temperatura)
+  temp: 0.01, // Scala della velocità iniziale (temperatura)
   sigma: 14, // Distanza caratteristica del potenziale Lennard-Jones
-  epsilon: 0.85, // Intensità del potenziale Lennard-Jones
-  rCut: 72, // Raggio massimo delle interazioni LJ (cutoff)
+  epsilon: 1.0, // Intensità del potenziale Lennard-Jones
+  rCut: 100, // Raggio massimo delle interazioni LJ (cutoff)
   rCut2: 72 * 72, // Cutoff al quadrato per evitare sqrt ripetute
   bondR: 48, // Distanza massima per disegnare legami visuali
   bondR2: 48 * 48, // Distanza legame al quadrato per ottimizzazione
   soft: 0.35, // Softening numerico per stabilità a distanza molto piccola
-  drag: 0.9992, // Smorzamento velocità ad ogni step
+  drag: 0.99992, // Smorzamento velocità ad ogni step
   maxV: 230, // Velocità massima consentita per atomo
   mouseR: 140, // Raggio d'influenza del mouse
   mouseR2: 140 * 140, // Raggio mouse al quadrato per ottimizzazione
@@ -46,22 +46,22 @@ const P = {
   collisionRestitution: 0.92, // Elasticità degli urti tra atomi (1 = perfettamente elastico)
   thermalKick: 2.0, // Rumore termico casuale applicato alle velocità
   minSpeed: 34, // Velocità minima target per mantenere il moto attivo
-  aggregateIntervalMin: 250, // Intervallo minimo (ms) tra due eventi cluster
-  aggregateIntervalMax: 650, // Intervallo massimo (ms) tra due eventi cluster
-  aggregateDurationMin: 14000, // Durata minima (ms) di un evento cluster
-  aggregateDurationMax: 24000, // Durata massima (ms) di un evento cluster
+  aggregateIntervalMin: 0, // Intervallo minimo (ms) tra due eventi cluster
+  aggregateIntervalMax: 20, // Intervallo massimo (ms) tra due eventi cluster
+  aggregateDurationMin: 20000, // Durata minima (ms) di un evento cluster
+  aggregateDurationMax: 100000, // Durata massima (ms) di un evento cluster
   aggregateGroupMin: 2, // Numero minimo di atomi per singolo cluster
   aggregateGroupMax: 8, // Numero massimo di atomi per singolo cluster
-  aggregateGroupsMin: 1, // Numero minimo di cluster simultanei
-  aggregateGroupsMax: 6, // Numero massimo di cluster simultanei
-  aggregateRadius: 250, // Raggio usato per cercare atomi da aggregare
-  aggregateStrength: 220, // Forza di attrazione verso il centro cluster
-  aggregateBondK: 220, // Rigidezza delle molle dei legami intra-cluster
+  aggregateGroupsMin: 2, // Numero minimo di cluster simultanei
+  aggregateGroupsMax: 8, // Numero massimo di cluster simultanei
+  aggregateRadius: 350, // Raggio usato per cercare atomi da aggregare
+  aggregateStrength: 150, // Forza di attrazione verso il centro cluster
+  aggregateBondK: 180, // Rigidezza delle molle dei legami intra-cluster
   aggregateBondDamping: 2.4, // Smorzamento sui legami intra-cluster
   aggregateRestMin: 8, // Lunghezza minima di riposo dei legami cluster
   aggregateRestMax: 14, // Lunghezza massima di riposo dei legami cluster
   electronCountMin: 1, // Numero minimo di elettroni visuali per atomo
-  electronCountMax: 5, // Numero massimo di elettroni visuali per atomo
+  electronCountMax: 10, // Numero massimo di elettroni visuali per atomo
   electronOrbitMin: 10, // Raggio minimo dell'orbita elettronica visuale
   electronOrbitMax: 68, // Raggio massimo dell'orbita elettronica visuale
   electronSizeMin: 1.4, // Dimensione minima degli elettroni visuali
@@ -70,12 +70,25 @@ const P = {
   electronSpeedMax: 2.8 // Velocità angolare massima degli elettroni visuali
 };
 
+const ATOM_COLORS = [
+  { r: 124, g: 243, b: 211, glow: 0.62 },
+  { r: 154, g: 167, b: 255, glow: 0.80 },
+  { r: 255, g: 146, b: 193, glow: 0.78 },
+  { r: 255, g: 201, b: 125, glow: 0.74 },
+  { r: 145, g: 255, b: 157, glow: 0.70 },
+  { r: 127, g: 214, b: 255, glow: 0.72 }
+];
+
 // Utilities
 const rand = (a, b) => a + Math.random() * (b - a);
 function wrap(x, L) { return (x % L + L) % L; }
 
 function randInt(a, b) {
   return Math.floor(rand(a, b + 1));
+}
+
+function pickAtomColor() {
+  return ATOM_COLORS[randInt(0, ATOM_COLORS.length - 1)];
 }
 
 function createElectrons() {
@@ -102,7 +115,7 @@ function initAtoms() {
       vx: rand(-1, 1) * P.temp * 120,
       vy: rand(-1, 1) * P.temp * 120,
       r: rand(2.2, 3.2),
-      type: Math.random() < 0.18 ? 1 : 0,
+      color: pickAtomColor(),
       electrons: createElectrons()
     });
   }
@@ -116,7 +129,7 @@ function addAtomsAt(x, y, n = 6) {
       vx: rand(-1, 1) * 110,
       vy: rand(-1, 1) * 110,
       r: rand(2.2, 3.2),
-      type: Math.random() < 0.25 ? 1 : 0,
+      color: pickAtomColor(),
       electrons: createElectrons()
     });
   }
@@ -264,7 +277,7 @@ function applyThermostat() {
 }
 
 function scheduleAggregation(now) {
-  const early = state.aggregation.nextAt === 0 ? 120 : 0;
+  const early = state.aggregation.nextAt === 0 ? 0 : 0;
   state.aggregation.nextAt = now + early + rand(P.aggregateIntervalMin, P.aggregateIntervalMax);
 }
 
@@ -498,9 +511,14 @@ function draw() {
       const r = Math.sqrt(r2);
       const a = 1.0 - r / Math.sqrt(P.bondR2);
       const alpha = 0.16 + 0.54 * (a * a);
+      const ci = ai.color || ATOM_COLORS[0];
+      const cj = aj.color || ATOM_COLORS[1];
+      const br = ((ci.r + cj.r) * 0.5) | 0;
+      const bg = ((ci.g + cj.g) * 0.5) | 0;
+      const bb = ((ci.b + cj.b) * 0.5) | 0;
 
       // subtle dual-tone lines
-      ctx.strokeStyle = `rgba(124,243,211,${alpha})`;
+      ctx.strokeStyle = `rgba(${br},${bg},${bb},${alpha})`;
       ctx.beginPath();
       ctx.moveTo(ai.x, ai.y);
       ctx.lineTo(ai.x - dx, ai.y - dy);
@@ -524,7 +542,12 @@ function draw() {
 
         const dist = Math.sqrt(dx * dx + dy * dy);
         const alpha = Math.max(0.18, 0.52 - 0.02 * Math.abs(dist - bond.rest));
-        ctx.strokeStyle = `rgba(154,167,255,${alpha})`;
+        const ci = ai.color || ATOM_COLORS[0];
+        const cj = aj.color || ATOM_COLORS[1];
+        const br = ((ci.r + cj.r) * 0.5) | 0;
+        const bg = ((ci.g + cj.g) * 0.5) | 0;
+        const bb = ((ci.b + cj.b) * 0.5) | 0;
+        ctx.strokeStyle = `rgba(${br},${bg},${bb},${alpha})`;
         ctx.beginPath();
         ctx.moveTo(ai.x, ai.y);
         ctx.lineTo(ai.x - dx, ai.y - dy);
@@ -536,8 +559,9 @@ function draw() {
 
   // atoms
   for (const a of atoms) {
-    const glow = a.type ? 0.80 : 0.62;
-    const col = a.type ? '154,167,255' : '124,243,211';
+    const c = a.color || ATOM_COLORS[0];
+    const glow = c.glow;
+    const col = `${c.r},${c.g},${c.b}`;
 
     // glow
     ctx.beginPath();
