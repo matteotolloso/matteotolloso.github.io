@@ -11,7 +11,16 @@ const state = {
   running: true,
   mouse: { x: 0, y: 0, down: false, active: false },
   t: 0,
-  aggregation: { active: false, nextAt: 0, endAt: 0, groups: [], bondedIds: new Set() }
+  aggregation: {
+    active: false,
+    nextAt: 0,
+    endAt: 0,
+    groups: [],
+    bondedIds: new Set(),
+    clusterBirthMs: new Map(),
+    clusterLifeMs: new Map(),
+    atomCooldownUntil: new Map()
+  }
 };
 
 function resize() {
@@ -32,7 +41,7 @@ const P = {
   temp: 0.01, // Scala della velocità iniziale (temperatura)
   sigma: 14, // Distanza caratteristica del potenziale Lennard-Jones
   epsilon: 1.0, // Intensità del potenziale Lennard-Jones
-  rCut: 100, // Raggio massimo delle interazioni LJ (cutoff)
+  rCut: 72, // Raggio massimo delle interazioni LJ (cutoff)
   rCut2: 72 * 72, // Cutoff al quadrato per evitare sqrt ripetute
   bondR: 48, // Distanza massima per disegnare legami visuali
   bondR2: 48 * 48, // Distanza legame al quadrato per ottimizzazione
@@ -44,22 +53,29 @@ const P = {
   mouseStrength: 1200, // Intensità della forza esercitata dal mouse
   addOnClick: 5, // Atomi aggiunti quando clicchi
   collisionRestitution: 0.92, // Elasticità degli urti tra atomi (1 = perfettamente elastico)
-  thermalKick: 2.0, // Rumore termico casuale applicato alle velocità
+  thermalKick: 3.0, // Rumore termico casuale applicato alle velocità
   minSpeed: 34, // Velocità minima target per mantenere il moto attivo
   aggregateIntervalMin: 0, // Intervallo minimo (ms) tra due eventi cluster
   aggregateIntervalMax: 20, // Intervallo massimo (ms) tra due eventi cluster
   aggregateDurationMin: 20000, // Durata minima (ms) di un evento cluster
   aggregateDurationMax: 100000, // Durata massima (ms) di un evento cluster
   aggregateGroupMin: 2, // Numero minimo di atomi per singolo cluster
-  aggregateGroupMax: 8, // Numero massimo di atomi per singolo cluster
-  aggregateGroupsMin: 2, // Numero minimo di cluster simultanei
-  aggregateGroupsMax: 8, // Numero massimo di cluster simultanei
-  aggregateRadius: 350, // Raggio usato per cercare atomi da aggregare
+  aggregateGroupMax: 5, // Numero massimo di atomi per singolo cluster
+  aggregateGroupsMin: 8, // Numero minimo di cluster simultanei
+  aggregateGroupsMax: 24, // Numero massimo di cluster simultanei
+  aggregateTargetCoverage: 0.98, // Quota target di atomi da includere nei cluster (0..1)
+  aggregateRadius: 280, // Raggio usato per cercare atomi da aggregare
+  aggregateLinkMax: 120, // Distanza massima consentita per creare un legame intra-cluster
   aggregateStrength: 150, // Forza di attrazione verso il centro cluster
-  aggregateBondK: 180, // Rigidezza delle molle dei legami intra-cluster
+  aggregateBondK: 280, // Rigidezza delle molle dei legami intra-cluster
   aggregateBondDamping: 2.4, // Smorzamento sui legami intra-cluster
   aggregateRestMin: 8, // Lunghezza minima di riposo dei legami cluster
   aggregateRestMax: 14, // Lunghezza massima di riposo dei legami cluster
+  aggregateExplodeAfterMin: 3000, // Tempo minimo (ms) prima che un cluster esploda
+  aggregateExplodeAfterMax: 7000, // Tempo massimo (ms) prima che un cluster esploda
+  aggregateExplodeImpulse: 190, // Intensità dell'impulso di esplosione
+  aggregateExplodeJitter: 30, // Rumore casuale aggiuntivo durante l'esplosione
+  aggregateExplodeCooldown: 900, // Cooldown (ms) dopo esplosione prima di riformare cluster
   electronCountMin: 1, // Numero minimo di elettroni visuali per atomo
   electronCountMax: 10, // Numero massimo di elettroni visuali per atomo
   electronOrbitMin: 10, // Raggio minimo dell'orbita elettronica visuale
@@ -291,11 +307,18 @@ function startAggregation(now) {
   const used = new Set();
   const bondedIds = new Set();
   const groups = [];
-  const targetGroups = randInt(P.aggregateGroupsMin, P.aggregateGroupsMax);
+  const avgGroupSize = (P.aggregateGroupMin + P.aggregateGroupMax) * 0.5;
+  const coverageGroups = Math.ceil((atoms.length * P.aggregateTargetCoverage) / avgGroupSize);
+  const targetGroups = Math.max(randInt(P.aggregateGroupsMin, P.aggregateGroupsMax), coverageGroups);
 
   for (let g = 0; g < targetGroups; g++) {
-    const seedIndex = randInt(0, atoms.length - 1);
-    if (used.has(seedIndex)) continue;
+    const available = [];
+    for (let i = 0; i < atoms.length; i++) {
+      if (!used.has(i)) available.push(i);
+    }
+    if (available.length < 2) break;
+
+    const seedIndex = available[randInt(0, available.length - 1)];
 
     const seed = atoms[seedIndex];
     const nearby = [];
@@ -317,17 +340,9 @@ function startAggregation(now) {
     }
 
     nearby.sort((a, b) => a.d2 - b.d2);
-    if (nearby.length < P.aggregateGroupMin - 1) {
-      for (let i = 0; i < atoms.length; i++) {
-        if (i === seedIndex || used.has(i)) continue;
-        if (!nearby.some((n) => n.i === i)) {
-          nearby.push({ i, d2: 1e12 + i });
-        }
-      }
-    }
 
     const size = Math.min(randInt(P.aggregateGroupMin, P.aggregateGroupMax), nearby.length + 1);
-    if (size < 2) continue;
+    if (size < P.aggregateGroupMin) continue;
 
     const members = [seedIndex];
     for (let k = 0; k < size - 1; k++) {
@@ -339,8 +354,19 @@ function startAggregation(now) {
       bondedIds.add(id);
     }
 
+    const linkMax2 = P.aggregateLinkMax * P.aggregateLinkMax;
     const bonds = [];
     for (let b = 1; b < members.length; b++) {
+      const a0 = atoms[members[b - 1]];
+      const a1 = atoms[members[b]];
+      let dx = a0.x - a1.x;
+      let dy = a0.y - a1.y;
+      if (dx > state.W / 2) dx -= state.W;
+      if (dx < -state.W / 2) dx += state.W;
+      if (dy > state.H / 2) dy -= state.H;
+      if (dy < -state.H / 2) dy += state.H;
+      if (dx * dx + dy * dy > linkMax2) continue;
+
       bonds.push({
         i: members[b - 1],
         j: members[b],
@@ -349,6 +375,16 @@ function startAggregation(now) {
     }
     if (members.length >= 4) {
       for (let b = 2; b < members.length; b += 2) {
+        const a0 = atoms[members[0]];
+        const a1 = atoms[members[b]];
+        let dx = a0.x - a1.x;
+        let dy = a0.y - a1.y;
+        if (dx > state.W / 2) dx -= state.W;
+        if (dx < -state.W / 2) dx += state.W;
+        if (dy > state.H / 2) dy -= state.H;
+        if (dy < -state.H / 2) dy += state.H;
+        if (dx * dx + dy * dy > linkMax2) continue;
+
         bonds.push({
           i: members[0],
           j: members[b],
@@ -372,20 +408,140 @@ function startAggregation(now) {
 }
 
 function updateAggregation(now) {
-  if (!state.aggregation.nextAt) {
-    scheduleAggregation(now);
+  const atoms = state.atoms;
+  const linkMax = P.aggregateLinkMax;
+  const linkMax2 = linkMax * linkMax;
+  const atomCooldownUntil = state.aggregation.atomCooldownUntil;
+
+  for (const [atomIdx, until] of atomCooldownUntil.entries()) {
+    if (until <= now) atomCooldownUntil.delete(atomIdx);
   }
 
-  if (!state.aggregation.active && now >= state.aggregation.nextAt) {
-    startAggregation(now);
+  const adjacency = Array.from({ length: atoms.length }, () => []);
+  const closeEdges = [];
+
+  for (let i = 0; i < atoms.length; i++) {
+    const ai = atoms[i];
+    for (let j = i + 1; j < atoms.length; j++) {
+      const aj = atoms[j];
+
+      if ((atomCooldownUntil.get(i) || 0) > now) continue;
+      if ((atomCooldownUntil.get(j) || 0) > now) continue;
+
+      let dx = ai.x - aj.x;
+      let dy = ai.y - aj.y;
+      if (dx > state.W / 2) dx -= state.W;
+      if (dx < -state.W / 2) dx += state.W;
+      if (dy > state.H / 2) dy -= state.H;
+      if (dy < -state.H / 2) dy += state.H;
+
+      const d2 = dx * dx + dy * dy;
+      if (d2 > linkMax2) continue;
+
+      const d = Math.sqrt(Math.max(d2, 1e-8));
+      const rest = Math.max(P.aggregateRestMin, Math.min(P.aggregateRestMax, d));
+
+      adjacency[i].push(j);
+      adjacency[j].push(i);
+      closeEdges.push({ i, j, rest });
+    }
   }
 
-  if (state.aggregation.active && now >= state.aggregation.endAt) {
-    state.aggregation.active = false;
-    state.aggregation.groups = [];
-    state.aggregation.bondedIds = new Set();
-    scheduleAggregation(now);
+  const visited = new Array(atoms.length).fill(false);
+  const groups = [];
+  const bondedIds = new Set();
+  const prevBirth = state.aggregation.clusterBirthMs;
+  const prevLife = state.aggregation.clusterLifeMs;
+  const nextBirth = new Map();
+  const nextLife = new Map();
+
+  for (let i = 0; i < atoms.length; i++) {
+    if (visited[i] || adjacency[i].length === 0) continue;
+
+    const stack = [i];
+    visited[i] = true;
+    const members = [];
+
+    while (stack.length) {
+      const node = stack.pop();
+      members.push(node);
+      for (const nb of adjacency[node]) {
+        if (visited[nb]) continue;
+        visited[nb] = true;
+        stack.push(nb);
+      }
+    }
+
+    if (members.length < 2) continue;
+    members.sort((a, b) => a - b);
+    const groupKey = members.join('-');
+
+    const memberSet = new Set(members);
+    const bonds = closeEdges.filter((e) => memberSet.has(e.i) && memberSet.has(e.j));
+    if (bonds.length === 0) continue;
+
+    const bornAt = prevBirth.has(groupKey) ? prevBirth.get(groupKey) : now;
+    const lifeMs = prevLife.has(groupKey)
+      ? prevLife.get(groupKey)
+      : rand(P.aggregateExplodeAfterMin, P.aggregateExplodeAfterMax);
+
+    if (now - bornAt >= lifeMs) {
+      const seed = atoms[members[0]];
+      let cx = seed.x;
+      let cy = seed.y;
+      for (let m = 1; m < members.length; m++) {
+        const a = atoms[members[m]];
+        let dx = a.x - seed.x;
+        let dy = a.y - seed.y;
+        if (dx > state.W / 2) dx -= state.W;
+        if (dx < -state.W / 2) dx += state.W;
+        if (dy > state.H / 2) dy -= state.H;
+        if (dy < -state.H / 2) dy += state.H;
+        cx += seed.x + dx;
+        cy += seed.y + dy;
+      }
+      cx /= members.length;
+      cy /= members.length;
+
+      for (const idx of members) {
+        const a = atoms[idx];
+        let dx = a.x - cx;
+        let dy = a.y - cy;
+        if (dx > state.W / 2) dx -= state.W;
+        if (dx < -state.W / 2) dx += state.W;
+        if (dy > state.H / 2) dy -= state.H;
+        if (dy < -state.H / 2) dy += state.H;
+
+        let d2 = dx * dx + dy * dy;
+        if (d2 < 1e-8) {
+          const ang = rand(0, Math.PI * 2);
+          dx = Math.cos(ang);
+          dy = Math.sin(ang);
+          d2 = 1;
+        }
+
+        const invD = 1 / Math.sqrt(d2);
+        const impulse = P.aggregateExplodeImpulse + rand(-P.aggregateExplodeJitter, P.aggregateExplodeJitter);
+        a.vx += dx * invD * impulse * P.dt * 0.02;
+        a.vy += dy * invD * impulse * P.dt * 0.02;
+        atomCooldownUntil.set(idx, now + P.aggregateExplodeCooldown);
+      }
+
+      continue;
+    }
+
+    nextBirth.set(groupKey, bornAt);
+    nextLife.set(groupKey, lifeMs);
+
+    for (const id of members) bondedIds.add(id);
+    groups.push({ members, bonds });
   }
+
+  state.aggregation.clusterBirthMs = nextBirth;
+  state.aggregation.clusterLifeMs = nextLife;
+  state.aggregation.groups = groups;
+  state.aggregation.bondedIds = bondedIds;
+  state.aggregation.active = groups.length > 0;
 }
 
 function applyAggregationForce() {
